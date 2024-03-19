@@ -19,7 +19,7 @@
         .profile-image {
             width: 120px;
             height: 120px;
-            display: block; /* Center image */
+            display: block;
             margin-left: auto;
             margin-right: auto;
         }
@@ -50,13 +50,13 @@
 <body>
     <div class="container">
         <div class="user-area">
-            <a href="/user/profile"><img src="{{ profile_image_url }}" alt="profile" class="profile-image">
+            <a href="/user_admin"><img src="{{ profile_image_url }}" alt="profile" class="profile-image">
             {% if user_name %}
-                <a href="/user/profile" class="user-name">{{ user_name }}</a>
+                <a href="/user_admin" class="user-name">{{ user_name }}</a>
             {% else %}
-                <a href="/user/profile" class="user-name">Guest</a>
+                <a href="/user_admin" class="user-name">Guest</a>
             {% endif %}
-        </div>
+        </div>        
         <div class="message-posting-area">
             <form method="POST" action="/post-message" enctype="multipart/form-data">
                 <input type="text" name="subject" class="form-control" placeholder="Subject" required>
@@ -70,8 +70,8 @@
                         <div class="message-header">
                             <strong>{{ message.user_name }}</strong> <span>{{ message.posted_date }}</span>
                         </div>
-                        <!-- Use the profile image URL here -->
-                        <img src="{{ message.profile_image_url }}" alt="{{ message.user_name }}'s profile image" class="profile-image">
+                        <!-- Check if a profile image URL is associated with the message; if not, use a default image -->
+                        <img src="{{ message.profile_image_url if message.profile_image_url else url_for('static', filename='default_profile.png') }}" alt="{{ message.user_name }}'s profile image" class="profile-image">
                         <div class="message-body">
                             <h5>{{ message.subject }}</h5>
                             <p>{{ message.message_text }}</p>
@@ -83,7 +83,7 @@
                 {% else %}
                     <p>No messages to display.</p>
                 {% endfor %}
-            </div>
+            </div>            
         <a href="/logout" class="btn btn-secondary btn-block">Logout</a>
     </div>
 </body>

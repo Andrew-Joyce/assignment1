@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Admin</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #f5f5f5;
+        }
+        .form-area, .message-area {
+            max-width: 800px;
+            padding: 15px;
+            margin: auto;
+        }
+        .profile-image {
+            width: 120px;
+            height: 120px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .error-message, .success-message {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .error-message {
+            color: red;
+            font-weight: bold;
+        }
+        .success-message {
+            color: green;
+            font-weight: bold;
+        }
+        .form-area input, .form-area button, .message-edit-area input, .message-edit-area textarea, .message-edit-area button {
+            width: 100%; 
+            margin-bottom: 10px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-area">
+            <h2>Change Password</h2>
+            <form method="POST" action="{{ url_for('user_admin') }}">
+                <input type="password" name="old_password" class="form-control" placeholder="Old Password" required>
+                <input type="password" name="new_password" class="form-control" placeholder="New Password" required>
+                <button type="submit" class="btn btn-primary btn-block">Change</button>
+            </form>
+        </div>
+
+        <div class="message-edit-area">
+            <h2>Edit Your Messages</h2>
+            {% for message in messages %}
+                <div class="message">
+                    <strong>{{ message.user_name }}</strong>
+                    <span>{{ message.posted_date }}</span>
+                    <form method="POST" action="{{ url_for('edit_message', message_id=message['id']) }}">
+                        <input type="text" name="subject" value="{{ message.subject }}" class="form-control" required>
+                        <textarea name="message_text" class="form-control" required>{{ message.message_text }}</textarea>
+                        <button type="submit" class="btn btn-primary btn-block">Update</button>
+                    </form>
+                </div>
+            {% else %}
+                <p>No messages to display.</p>
+            {% endfor %}
+        </div>
+        
+        <a href="/logout" class="btn btn-secondary btn-block">Logout</a>
+    </div>
+</body>
+</html>
+

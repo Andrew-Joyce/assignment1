@@ -6,7 +6,6 @@ from register import perform_register
 app = Flask(__name__)
 app.secret_key = "95871372a"
 
-# Initialize Firestore client
 db = firestore.Client()
 
 @app.route('/')
@@ -19,12 +18,11 @@ def login():
         user_id = request.form['id']
         password = request.form['password']
         
-        # Query Firestore for user with matching 'id'
         users_ref = db.collection('user')
         query = users_ref.where('id', '==', user_id)
         results = query.stream()
         
-        user = next(results, None)  # Get the first result
+        user = next(results, None)
         if user:
             user_data = user.to_dict()
             if user_data.get('password') == password:  
@@ -71,10 +69,14 @@ def register():
 def forum():
     if 'user_name' not in session:
         return redirect(url_for('login'))
-    user_name = session['user_name']
-    profile_image_url = session.get('profile_image_url', '')
+    
+    profile_image_url = session.get('profile_image_url', url_for('static', filename='default_profile.png'))
+    
     messages = fetch_messages()
-    return render_template('forum.html', user_name=user_name, profile_image_url=profile_image_url, messages=messages)
+    for message in messages:
+        message['profile_image_url'] = profile_image_url
+
+    return render_template('forum.html', user_name=session.get('user_name', 'Guest'), profile_image_url=profile_image_url, messages=messages)
 
 @app.route('/post-message', methods=['POST'])
 def post_message():
@@ -107,6 +109,82 @@ def post_message():
 
 def fetch_messages():
     messages_query = db.collection('messages').order_by('posted_date', direction=firestore.Query.DESCENDING).limit(10)
+    messages = messages_query.stream()
+
+    message_list = []
+    for message in messages:
+        message_dict = message.to_dict()
+        message_dict['id'] = message.id
+        message_list.append(message_dict)
+
+    return message_list
+
+@app.route('/user_admin', methods=['GET', 'POST'])
+def user_admin():
+    if 'user_name' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        print("Old password from form:", request.form['old_password'])
+        print("New password from form:", request.form['new_password'])
+
+        user_ref = db.collection('user').document(session['user_id'])
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            print("Password from Firestore:", user_data['password'])
+        else:
+            print("No user found in Firestore with ID:", session['user_id'])
+
+        if user_doc.exists and user_data['password'] == request.form['old_password']:
+            user_ref.update({'password': request.form['new_password']})
+            flash('Password updated successfully!', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('The old password is incorrect or user not found', 'error')
+
+    messages = fetch_user_messages(session.get('user_id', ''))
+    return render_template('user_admin.html', user_name=session.get('user_name', 'Guest'), profile_image_url=session.get('profile_image_url', url_for('static', filename='default_profile.png')), messages=messages)
+
+
+
+@app.route('/edit-message/<message_id>', methods=['GET', 'POST'])
+def edit_message(message_id):
+    if 'user_name' not in session:
+        return redirect(url_for('login'))
+
+    message_ref = db.collection('messages').document(message_id)
+    message = message_ref.get()
+    message_data = message.to_dict()
+
+    if request.method == 'POST':
+        subject = request.form['subject']
+        message_text = request.form['message']
+        image = request.files.get('image')
+        
+        update_data = {
+            'subject': subject,
+            'message_text': message_text,
+            'posted_date': datetime.datetime.utcnow()
+        }
+
+        if image:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket('ass_cloud1')
+            blob = bucket.blob(f"messages/{message_id}") 
+            blob.upload_from_file(image, content_type=image.content_type)
+            blob.make_public()
+            update_data['image_url'] = blob.public_url
+
+        message_ref.update(update_data)
+        flash('Message updated successfully!', 'success')
+        return redirect(url_for('forum'))
+
+    return render_template('edit_message.html', message=message_data)
+
+def fetch_user_messages(user_id):
+    messages_query = db.collection('messages').where('user_id', '==', user_id).order_by('posted_date', direction=firestore.Query.DESCENDING)
     messages = messages_query.stream()
 
     message_list = []
