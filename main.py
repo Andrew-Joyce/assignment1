@@ -67,16 +67,15 @@ def register():
 
 @app.route('/forum')
 def forum():
-    if 'user_name' not in session:
+    if 'user_id' not in session: 
         return redirect(url_for('login'))
     
     profile_image_url = session.get('profile_image_url', url_for('static', filename='default_profile.png'))
-    
-    messages = fetch_messages()
-    for message in messages:
-        message['profile_image_url'] = profile_image_url
+
+    messages = fetch_user_messages(session['user_id'])
 
     return render_template('forum.html', user_name=session.get('user_name', 'Guest'), profile_image_url=profile_image_url, messages=messages)
+
 
 @app.route('/post-message', methods=['POST'])
 def post_message():
@@ -89,6 +88,7 @@ def post_message():
 
     doc_ref = db.collection('messages').document()
     doc_ref.set({
+        'user_id': session['user_id'], 
         'user_name': session['user_name'],
         'subject': subject,
         'message_text': message_text,
@@ -105,7 +105,6 @@ def post_message():
         doc_ref.update({'image_url': image_url})
 
     return redirect(url_for('forum'))
-
 
 def fetch_messages():
     messages_query = db.collection('messages').order_by('posted_date', direction=firestore.Query.DESCENDING).limit(10)
@@ -125,28 +124,28 @@ def user_admin():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        print("Old password from form:", request.form['old_password'])
-        print("New password from form:", request.form['new_password'])
+        old_password = request.form['old_password']
+        new_password = request.form['new_password']
 
         user_ref = db.collection('user').document(session['user_id'])
         user_doc = user_ref.get()
 
         if user_doc.exists:
             user_data = user_doc.to_dict()
-            print("Password from Firestore:", user_data['password'])
+            if user_data['password'] == old_password:
+                user_ref.update({'password': new_password})
+                flash('Password updated successfully!', 'success')
+                return redirect(url_for('login'))
+            else:
+                flash('The old password is incorrect', 'error')
         else:
-            print("No user found in Firestore with ID:", session['user_id'])
+            flash('No user found with this ID.', 'error')
 
-        if user_doc.exists and user_data['password'] == request.form['old_password']:
-            user_ref.update({'password': request.form['new_password']})
-            flash('Password updated successfully!', 'success')
-            return redirect(url_for('login'))
-        else:
-            flash('The old password is incorrect or user not found', 'error')
-
+        messages = fetch_user_messages(session['user_id'])
+        return render_template('user_admin.html', user_name=session.get('user_name', 'Guest'), profile_image_url=session.get('profile_image_url', url_for('static', filename='default_profile.png')), messages=messages)
+    
     messages = fetch_user_messages(session.get('user_id', ''))
     return render_template('user_admin.html', user_name=session.get('user_name', 'Guest'), profile_image_url=session.get('profile_image_url', url_for('static', filename='default_profile.png')), messages=messages)
-
 
 
 @app.route('/edit-message/<message_id>', methods=['GET', 'POST'])
@@ -156,13 +155,16 @@ def edit_message(message_id):
 
     message_ref = db.collection('messages').document(message_id)
     message = message_ref.get()
+    if not message.exists:
+        flash('Message not found.', 'error')
+        return redirect(url_for('forum'))
     message_data = message.to_dict()
 
     if request.method == 'POST':
-        subject = request.form['subject']
-        message_text = request.form['message']
+        subject = request.form.get('subject')
+        message_text = request.form.get('message_text')
         image = request.files.get('image')
-        
+
         update_data = {
             'subject': subject,
             'message_text': message_text,
@@ -172,7 +174,7 @@ def edit_message(message_id):
         if image:
             storage_client = storage.Client()
             bucket = storage_client.bucket('ass_cloud1')
-            blob = bucket.blob(f"messages/{message_id}") 
+            blob = bucket.blob(f"messages/{message_id}")
             blob.upload_from_file(image, content_type=image.content_type)
             blob.make_public()
             update_data['image_url'] = blob.public_url
@@ -182,6 +184,7 @@ def edit_message(message_id):
         return redirect(url_for('forum'))
 
     return render_template('edit_message.html', message=message_data)
+
 
 def fetch_user_messages(user_id):
     messages_query = db.collection('messages').where('user_id', '==', user_id).order_by('posted_date', direction=firestore.Query.DESCENDING)
