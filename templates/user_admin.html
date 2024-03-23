@@ -3,55 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Admin</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <style>
-        body {
-            padding-top: 40px;
-            padding-bottom: 40px;
-            background-color: #f5f5f5;
-        }
-        .form-signin {
-            max-width: 330px;
-            padding: 20px;
-            margin: auto;
-        }
-        .form-signin .form-signin-heading,
-        .form-signin .checkbox {
-            margin-bottom: 20px;
-        }
-        .form-signin .form-control {
-            position: relative;
-            height: auto;
-            -webkit-box-sizing: border-box;
-            -moz-box-sizing: border-box;
-            box-sizing: border-box;
-            padding: 20px;
-            font-size: 16px;
-        }
-        .form-signin .form-control:focus {
-            z-index: 2;
-        }
-        .form-signin input[type="text"],
-        .form-signin input[type="password"] {
-            margin-bottom: 20px; 
-            border-radius: 0;
-        }
-        .error-message {
-            color: red;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .message-display img {
-            max-width: 100%;
-            height: auto;
-            margin-top: 20px;
-        }
-        .form-signin button {
-            margin-top: 20px; 
-        }
-    </style>
+    <title>Forum</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
@@ -71,19 +24,27 @@
             </form>
         </div>
 
+        <div class="profile-picture-update-area">
+            <h2>Update Profile Picture</h2>
+            <form method="POST" action="{{ url_for('user_admin') }}" enctype="multipart/form-data">
+                <input type="file" name="profile_image" class="form-control" required>
+                <button type="submit" class="btn btn-primary btn-block">Update Picture</button>
+            </form>
+        </div>
+
         <div class="message-edit-area">
             <h2>Edit Your Messages</h2>
             {% for message in messages %}
-            <div id="message-{{ message.id }}" class="message-display">
-                <p>Subject: <span class="message-subject">{{ message.subject }}</span></p>
-                <p>Message: <span class="message-text">{{ message.message_text }}</span></p>
-                {% if message.image_url %}
-                <img src="{{ message.image_url }}" alt="Message Image">
-                {% endif %}
-                <button onclick="editMessage('{{ message.id }}')">Edit</button>
-            </div>
+                <div id="message-{{ message.id }}" class="message-display">
+                    <p>Subject: <span class="message-subject">{{ message.subject }}</span></p>
+                    <p>Message: <span class="message-text">{{ message.message_text }}</span></p>
+                    {% if message.image_url %}
+                        <img src="{{ message.image_url }}" alt="Message Image" class="img-preview">
+                    {% endif %}
+                    <button onclick="editMessage('{{ message.id }}')">Edit</button>
+                </div>
             {% else %}
-            <p>No messages to display.</p>
+                <p>No messages to display.</p>
             {% endfor %}
         </div>
 
@@ -95,17 +56,19 @@
             var messageEl = document.getElementById('message-' + messageId);
             var subject = messageEl.querySelector('.message-subject').innerText;
             var text = messageEl.querySelector('.message-text').innerText;
+            var image = messageEl.querySelector('img') ? messageEl.querySelector('img').src : '';
 
             messageEl.innerHTML = `
-            <form action="/edit-message/${messageId}" method="POST">
-                <input type="text" name="subject" value="${subject}" required class="form-control">
-                <textarea name="message_text" required class="form-control">${text}</textarea>
-                <input type="file" name="image" class="form-control">
-                <button type="submit" class="btn btn-primary btn-block">Update</button>
-            </form>
+                <form action="/edit-message/${messageId}" method="POST" enctype="multipart/form-data">
+                    <input type="text" name="subject" value="${subject}" required class="form-control">
+                    <textarea name="message_text" required class="form-control">${text}</textarea>
+                    Current Image: <br>
+                    <img src="${image}" alt="Current Image" class="img-preview">
+                    <input type="file" name="image" class="form-control">
+                    <button type="submit" class="btn btn-primary btn-block">Update</button>
+                </form>
             `;
         }
     </script>
 </body>
 </html>
-
