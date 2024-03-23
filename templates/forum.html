@@ -70,8 +70,7 @@
                         <div class="message-header">
                             <strong>{{ message.user_name }}</strong> <span>{{ message.posted_date }}</span>
                         </div>
-                        <!-- Check if a profile image URL is associated with the message; if not, use a default image -->
-                        <img src="{{ message.profile_image_url if message.profile_image_url else url_for('static', filename='default_profile.png') }}" alt="{{ message.user_name }}'s profile image" class="profile-image">
+                        <img src="{{ message.profile_image_url }}" alt="{{ message.user_name }}'s profile image" class="profile-image">
                         <div class="message-body">
                             <h5>{{ message.subject }}</h5>
                             <p>{{ message.message_text }}</p>

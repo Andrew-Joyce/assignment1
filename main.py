@@ -1,7 +1,8 @@
 from flask import Flask, session, redirect, url_for, render_template, request, flash
 from google.cloud import firestore, storage
-import datetime
-from register import perform_register
+import datetime, logging
+from google.api_core.exceptions import GoogleAPIError
+import time  
 
 app = Flask(__name__)
 app.secret_key = "95871372a"
@@ -168,19 +169,33 @@ def edit_message(message_id):
         update_data = {
             'subject': subject,
             'message_text': message_text,
-            'posted_date': datetime.datetime.utcnow()
+            'posted_date': datetime.datetime.now(datetime.timezone.utc)  # Updated to timezone-aware
         }
 
         if image:
-            storage_client = storage.Client()
-            bucket = storage_client.bucket('ass_cloud1')
-            blob = bucket.blob(f"messages/{message_id}")
-            blob.upload_from_file(image, content_type=image.content_type)
-            blob.make_public()
-            update_data['image_url'] = blob.public_url
+            logging.info(f"Image file received: {image.filename}")  # Logging file receipt
+            try:
+                storage_client = storage.Client()
+                bucket = storage_client.bucket('ass_cloud1')
+                blob = bucket.blob(f"messages/{message_id}_{time.time()}")  # Unique filename using timestamp
+                blob.upload_from_file(image, content_type=image.content_type)
+                blob.make_public()
+                update_data['image_url'] = f"{blob.public_url}?v={time.time()}"  # Cache-busting query parameter
+                logging.info(f"Image successfully uploaded to Google Cloud Storage: {blob.public_url}")
+            except Exception as e:
+                logging.error(f"Failed to upload image: {e}")
+                flash('Failed to upload image. Please try again.', 'error')
+        else:
+            logging.info("No image file received in the request.")
 
-        message_ref.update(update_data)
-        flash('Message updated successfully!', 'success')
+        try:
+            message_ref.update(update_data)
+            logging.info(f"Firestore document for message {message_id} updated successfully.")
+            flash('Message updated successfully!', 'success')
+        except GoogleAPIError as e:
+            flash('Failed to update the message. Please try again.', 'error')
+            logging.error(f"Failed to update message {message_id}: {e}")
+
         return redirect(url_for('forum'))
 
     return render_template('edit_message.html', message=message_data)
@@ -194,9 +209,19 @@ def fetch_user_messages(user_id):
     for message in messages:
         message_dict = message.to_dict()
         message_dict['id'] = message.id
+        
+        user_ref = db.collection('user').document(message_dict['user_id'])
+        user_doc = user_ref.get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            message_dict['profile_image_url'] = user_data.get('profile_image_url', url_for('static', filename='default_profile.png'))
+        else:
+            message_dict['profile_image_url'] = url_for('static', filename='default_profile.png')
+        
         message_list.append(message_dict)
 
     return message_list
+
 
 @app.route('/logout')
 def logout():

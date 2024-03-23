@@ -13,12 +13,12 @@
         }
         .form-signin {
             max-width: 330px;
-            padding: 15px;
+            padding: 20px;
             margin: auto;
         }
         .form-signin .form-signin-heading,
         .form-signin .checkbox {
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
         .form-signin .form-control {
             position: relative;
@@ -26,7 +26,7 @@
             -webkit-box-sizing: border-box;
             -moz-box-sizing: border-box;
             box-sizing: border-box;
-            padding: 10px;
+            padding: 20px;
             font-size: 16px;
         }
         .form-signin .form-control:focus {
@@ -34,14 +34,22 @@
         }
         .form-signin input[type="text"],
         .form-signin input[type="password"] {
-            margin-bottom: 10px;
+            margin-bottom: 20px; 
             border-radius: 0;
         }
         .error-message {
             color: red;
             font-weight: bold;
             text-align: center;
-            margin-top: 10px; 
+            margin-top: 20px;
+        }
+        .message-display img {
+            max-width: 100%;
+            height: auto;
+            margin-top: 20px;
+        }
+        .form-signin button {
+            margin-top: 20px; 
         }
     </style>
 </head>
@@ -54,30 +62,31 @@
                 <input type="password" name="new_password" class="form-control" placeholder="New Password" required>
                 <button type="submit" class="btn btn-primary btn-block">Change</button>
                 {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="error-message">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="error-message">{{ message }}</div>
+                {% endfor %}
+                {% endif %}
                 {% endwith %}
             </form>
         </div>
 
-
         <div class="message-edit-area">
             <h2>Edit Your Messages</h2>
             {% for message in messages %}
-                <div id="message-{{ message.id }}" class="message-display">
-                    <p>Subject: <span class="message-subject">{{ message.subject }}</span></p>
-                    <p>Message: <span class="message-text">{{ message.message_text }}</span></p>
-                    <!-- Edit button triggers JavaScript function -->
-                    <button onclick="editMessage('{{ message.id }}')">Edit</button>
-                </div>
+            <div id="message-{{ message.id }}" class="message-display">
+                <p>Subject: <span class="message-subject">{{ message.subject }}</span></p>
+                <p>Message: <span class="message-text">{{ message.message_text }}</span></p>
+                {% if message.image_url %}
+                <img src="{{ message.image_url }}" alt="Message Image">
+                {% endif %}
+                <button onclick="editMessage('{{ message.id }}')">Edit</button>
+            </div>
             {% else %}
-                <p>No messages to display.</p>
+            <p>No messages to display.</p>
             {% endfor %}
-        </div>        
-        
+        </div>
+
         <a href="/logout" class="btn btn-secondary btn-block">Logout</a>
     </div>
 
@@ -88,14 +97,15 @@
             var text = messageEl.querySelector('.message-text').innerText;
 
             messageEl.innerHTML = `
-                <form action="/edit-message/${messageId}" method="POST">
-                    <input type="text" name="subject" value="${subject}" required class="form-control">
-                    <textarea name="message_text" required class="form-control">${text}</textarea>
-                    <input type="file" name="image" class="form-control">
-                    <button type="submit" class="btn btn-primary btn-block">Update</button>
-                </form>
+            <form action="/edit-message/${messageId}" method="POST">
+                <input type="text" name="subject" value="${subject}" required class="form-control">
+                <textarea name="message_text" required class="form-control">${text}</textarea>
+                <input type="file" name="image" class="form-control">
+                <button type="submit" class="btn btn-primary btn-block">Update</button>
+            </form>
             `;
         }
     </script>
 </body>
 </html>
+
