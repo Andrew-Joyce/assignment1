@@ -1,0 +1,22 @@
+steps:
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+    dir: 'frontend'  
+
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+    dir: 'frontend'  
+
+  - name: 'python:3.9'
+    entrypoint: 'pip'
+    args: ['install', '-r', 'requirements.txt']
+
+  - name: 'python:3.9'
+    entrypoint: 'pytest'
+    dir: 'tests'  
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['app', 'deploy']
+    timeout: '1600s'  
+
+timeout: '1600s'  
