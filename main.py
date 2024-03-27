@@ -1,3 +1,7 @@
+# Import necessary modules for the application including Flask, Firestore, and Google Cloud Storage.
+# Flask is used for creating the web application.
+# Firestore is used for interacting with the Firestore database.
+# Google Cloud Storage is used for storing user images and message images.
 from flask import Flask, session, redirect, url_for, render_template, request, flash
 from werkzeug.utils import secure_filename
 from google.cloud import firestore, storage
@@ -6,15 +10,19 @@ from google.api_core.exceptions import GoogleAPIError
 import time
 
 
+# Initialises Flask app and set a secret key for session management.
 app = Flask(__name__)
 app.secret_key = "95871372a"
 
+# Initialises Firestore client to interact with the database.
 db = firestore.Client()
 
+# Redirect users to the login page by default.
 @app.route('/')
 def index():
     return redirect(url_for('login'))
 
+# Handles user login functionality, including processing login requests and rendering the login page.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -38,7 +46,8 @@ def login():
         return render_template('login.html')
     else:
         return render_template('login.html')
-
+    
+# Handles user registration, including processing registration requests and rendering the registration page.
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -68,6 +77,7 @@ def register():
     else:
         return render_template('register.html')
 
+# Displays the forum page, including handling user authentication and fetching forum messages.
 @app.route('/forum')
 def forum():
     if 'user_id' not in session: 
@@ -94,7 +104,7 @@ def forum():
     return render_template('forum.html', username=session.get('username', 'Guest'), profile_image_url=session['profile_image_url'], messages=messages)
 
 
-
+# Post a message to the forum, including handling authentication and uploading images.
 @app.route('/post-message', methods=['POST'])
 def post_message():
     if 'username' not in session:
@@ -124,6 +134,7 @@ def post_message():
 
     return redirect(url_for('forum'))
 
+# Fetch messages from the database, optionally filtering by user ID.
 def fetch_messages(user_id):
     if not user_id:
         return []
@@ -139,7 +150,7 @@ def fetch_messages(user_id):
 
     return message_list
 
-
+# Display the user administration page, handling authentication and user profile updates.
 @app.route('/user_admin', methods=['GET', 'POST'])
 def user_admin():
     messages = []
@@ -182,6 +193,7 @@ def user_admin():
         messages=messages
     )
 
+#Handles the update of the file to cloud storage
 def upload_to_cloud_storage(file, filename):
     storage_client = storage.Client()
     bucket = storage_client.bucket('ass_cloud1')
@@ -190,7 +202,7 @@ def upload_to_cloud_storage(file, filename):
     blob.make_public()
     return blob.public_url
 
-
+#Allows users to edit the forum message, including updating the message and attached images
 @app.route('/edit-message/<message_id>', methods=['GET', 'POST'])
 def edit_message(message_id):
     if 'username' not in session:
@@ -247,7 +259,7 @@ def edit_message(message_id):
     return render_template('edit_message.html', message=message_data)
 
 
-
+#Retrieves the messages from the cloud to be displayed on the forum and user admin pages
 def fetch_messages():
     if 'user_id' not in session:
         return []
@@ -264,7 +276,7 @@ def fetch_messages():
 
     return message_list
 
-
+#Handles the registration of a new user and stores their details in the cloud 
 def perform_register(user_id, username, password, image_url, db):
     users_ref = db.collection('users')
     query = users_ref.where('id', '==', user_id)
@@ -289,10 +301,12 @@ def perform_register(user_id, username, password, image_url, db):
     
     return {"success": True, "message": "Registration successful! Please log in."}
 
+#Handles the user logging out of the program 
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('login'))
 
+#Starts the Flask web application by calling the run method on the app object.
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
